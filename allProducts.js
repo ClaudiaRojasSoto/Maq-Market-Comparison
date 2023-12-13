@@ -13,9 +13,10 @@ const scrapeProductsFromSubcategory = async (subcategory) => {
       const priceId = $(element).find('[data-price-type="finalPrice"]').attr('id');
       const productCode = priceId ? priceId.replace('product-price-', '') : '';
       const productPrice = $(element).find('.price-final_price > .price-wrapper > .price').text().trim();
+      const productImage = $(element).find('.product-image-photo').attr('src').trim();
 
-      if (productName && productPrice) {
-        products.push({ productName, productCode, productPrice });
+      if (productName && productPrice && productImage) {
+        products.push({ productName, productCode, productPrice, productImage });
       }
     });
 

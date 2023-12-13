@@ -2,6 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 
+// Función para raspar los productos de una subcategoría específica
 const scrapeProductsFromSubcategory = async (subcategory) => {
   try {
     const { data } = await axios.get(subcategory.href);
@@ -16,7 +17,9 @@ const scrapeProductsFromSubcategory = async (subcategory) => {
       const productImage = $(element).find('.product-image-photo').attr('src').trim();
 
       if (productName && productPrice && productImage) {
-        products.push({ productName, productCode, productPrice, productImage });
+        products.push({
+          productName, productCode, productPrice, productImage,
+        });
       }
     });
 
@@ -27,6 +30,7 @@ const scrapeProductsFromSubcategory = async (subcategory) => {
   }
 };
 
+// Función para raspar las subcategorías de la URL principal
 const scrapeSubcategories = async (url) => {
   try {
     const { data } = await axios.get(url);
@@ -45,6 +49,7 @@ const scrapeSubcategories = async (url) => {
   }
 };
 
+// Función para guardar los datos en un archivo JS
 const saveDataToJsFile = (data, fileName) => {
   const jsContent = `module.exports = ${JSON.stringify(data, null, 2)};`;
   fs.writeFile(fileName, jsContent, 'utf8', (err) => {
@@ -57,26 +62,26 @@ const saveDataToJsFile = (data, fileName) => {
 };
 
 // Función de pausa (sleep)
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Función para automatizar el scraping de todas las subcategorías y productos
 const scrapeAndSaveAllProducts = async (url) => {
   try {
     const subcategories = await scrapeSubcategories(url);
-    const allProducts = [];
 
-    for (const subcategory of subcategories) {
-      const products = await scrapeProductsFromSubcategory(subcategory);
-      allProducts.push(...products);
-      
-      // Agrega un retraso aquí para esperar 1 segundo antes de la siguiente subcategoría
-      await sleep(1000);
-    }
+    // Uso de map y Promise.all para manejar las promesas en paralelo
+    const productsArrays = await Promise.all(subcategories.map(async (subcategory) => {
+      await sleep(1000); // Agrega un retraso para evitar sobrecargar el servidor
+      return scrapeProductsFromSubcategory(subcategory);
+    }));
 
+    const allProducts = productsArrays.flat(); // Aplana el array de arrays
     saveDataToJsFile(allProducts, 'allProductsData.js');
   } catch (error) {
     console.error('Hubo un error al procesar todos los productos:', error);
   }
 };
 
+// URL de la página principal de subcategorías
 const url = 'https://www.soonparts.com/departments';
 scrapeAndSaveAllProducts(url);
